@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>SABPlus.Radial.Overlay</AssemblyName>
+    <RootNamespace>SABPlus.Radial.Overlay</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SABPlus.Radial.Core\SABPlus.Radial.Core.csproj" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <EmbeddedResource Include="..\..\assets\CommandRing_16.png" LogicalName="SABPlus.Assets.CommandRing_16.png" />
+    <EmbeddedResource Include="..\..\assets\CommandRing_32.png" LogicalName="SABPlus.Assets.CommandRing_32.png" />
+  </ItemGroup>
+</Project>

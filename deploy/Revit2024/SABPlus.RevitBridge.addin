@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>SAB+ Radial Bridge</Name>
+    <Assembly>__SABPLUS_INSTALL_DIRECTORY__\SABPlus.RevitBridge.dll</Assembly>
+    <AddInId>761F15C3-4516-43CA-AFA7-8A8D16B1C60A</AddInId>
+    <FullClassName>SABPlus.RevitBridge.App</FullClassName>
+    <VendorId>SABP</VendorId>
+    <VendorDescription>SAB+ Revit Productivity Tools</VendorDescription>
+  </AddIn>
+</RevitAddIns>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>SABPlus.Radial.Core.SmokeTests</AssemblyName>
+    <RootNamespace>SABPlus.Radial.Core.SmokeTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SABPlus.Radial.Core\SABPlus.Radial.Core.csproj" />
+  </ItemGroup>
+</Project>

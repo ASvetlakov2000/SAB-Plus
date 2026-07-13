@@ -1,0 +1,61 @@
+<Window x:Class="SABPlus.Radial.Setup.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SAB+ — Установка радиального колеса"
+        Width="620" Height="500" MinWidth="580" MinHeight="470"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock FontSize="22" FontWeight="SemiBold" Text="SAB+ Радиальное колесо" />
+            <TextBlock Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}"
+                       Text="Установка локального overlay и Revit add-in для Autodesk Revit 2023–2024." />
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="{StaticResource PanelBackground}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                CornerRadius="7" Padding="20">
+            <StackPanel>
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Компоненты" />
+                <TextBlock Margin="0,6,0,18" Foreground="{StaticResource SecondaryTextBrush}"
+                           Text="Выберите версии Revit, в которых должна появиться кнопка SAB+." />
+
+                <CheckBox x:Name="Revit2023CheckBox" IsChecked="True" Content="Autodesk Revit 2023" />
+                <CheckBox x:Name="Revit2024CheckBox" IsChecked="True" Content="Autodesk Revit 2024" />
+                <CheckBox x:Name="LaunchOverlayCheckBox" Margin="0,8,0,0" IsChecked="True"
+                          Content="Запустить SAB+ после установки" />
+
+                <Border Margin="0,20,0,0" Padding="12" Background="#F5F7FA" CornerRadius="5">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="Папка установки" />
+                        <TextBlock x:Name="InstallPathText" Margin="0,4,0,0"
+                                   Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="StatusText" Margin="0,18,0,0" TextWrapping="Wrap"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Text="Готово к установке." />
+                <ProgressBar x:Name="ProgressBar" Margin="0,10,0,0" Height="5" IsIndeterminate="False" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="4">
+            <Button x:Name="UninstallButton" HorizontalAlignment="Left" Content="Удалить"
+                    Click="UninstallButton_Click" />
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button Content="Закрыть" Click="CloseButton_Click" />
+                <Button x:Name="InstallButton" Margin="10,0,0,0" Background="{StaticResource AccentBrush}"
+                        BorderBrush="{StaticResource AccentBrush}" Foreground="White"
+                        FontWeight="SemiBold" Content="Установить" Click="InstallButton_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

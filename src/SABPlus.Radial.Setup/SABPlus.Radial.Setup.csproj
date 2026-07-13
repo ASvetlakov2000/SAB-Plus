@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>SABPlus.Radial.Setup</AssemblyName>
+    <RootNamespace>SABPlus.Radial.Setup</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SABPlus.Radial.Core\SABPlus.Radial.Core.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\SABPlus.Radial.Overlay\SABPlus.Radial.Overlay.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\SABPlus.RevitBridge\SABPlus.RevitBridge.csproj" ReferenceOutputAssembly="false" />
+    <EmbeddedResource Include="..\SABPlus.Radial.Overlay\bin\$(Configuration)\net48\SABPlus.Radial.Overlay.exe"
+                      LogicalName="SABPlus.Payload.SABPlus.Radial.Overlay.exe" />
+    <EmbeddedResource Include="..\SABPlus.Radial.Overlay\bin\$(Configuration)\net48\SABPlus.Radial.Overlay.exe.config"
+                      LogicalName="SABPlus.Payload.SABPlus.Radial.Overlay.exe.config" />
+    <EmbeddedResource Include="..\SABPlus.RevitBridge\bin\$(Configuration)\net48\SABPlus.RevitBridge.dll"
+                      LogicalName="SABPlus.Payload.SABPlus.RevitBridge.dll" />
+    <EmbeddedResource Include="..\SABPlus.Radial.Core\bin\$(Configuration)\net48\SABPlus.Radial.Core.dll"
+                      LogicalName="SABPlus.Payload.SABPlus.Radial.Core.dll" />
+    <EmbeddedResource Include="..\SABPlus.Radial.Overlay\bin\$(Configuration)\net48\Newtonsoft.Json.dll"
+                      LogicalName="SABPlus.Payload.Newtonsoft.Json.dll" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,13 @@
+.vs/
+.idea/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
+artifacts/
+TestResults/
+.codex/
+*.log
+wheel-settings.json
+project-wheel-state.json

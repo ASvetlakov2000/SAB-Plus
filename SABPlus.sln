@@ -1,0 +1,45 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SABPlus.Radial.Core", "src\SABPlus.Radial.Core\SABPlus.Radial.Core.csproj", "{A4D11622-3172-4A37-A714-208CBBE33211}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SABPlus.Radial.Overlay", "src\SABPlus.Radial.Overlay\SABPlus.Radial.Overlay.csproj", "{B8F7E9C4-2B5A-4509-A4F8-0D3A2D970B26}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SABPlus.RevitBridge", "src\SABPlus.RevitBridge\SABPlus.RevitBridge.csproj", "{CC8CF6F5-C08C-49D4-B504-3C6572BEA992}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SABPlus.Radial.Core.SmokeTests", "tests\SABPlus.Radial.Core.SmokeTests\SABPlus.Radial.Core.SmokeTests.csproj", "{DDE31FD9-D68D-4B74-BDD0-ABFAE9F83730}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SABPlus.Radial.Setup", "src\SABPlus.Radial.Setup\SABPlus.Radial.Setup.csproj", "{F16CD4A9-D873-4E8E-AF81-50CD69348E95}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A4D11622-3172-4A37-A714-208CBBE33211}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4D11622-3172-4A37-A714-208CBBE33211}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4D11622-3172-4A37-A714-208CBBE33211}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4D11622-3172-4A37-A714-208CBBE33211}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8F7E9C4-2B5A-4509-A4F8-0D3A2D970B26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8F7E9C4-2B5A-4509-A4F8-0D3A2D970B26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8F7E9C4-2B5A-4509-A4F8-0D3A2D970B26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8F7E9C4-2B5A-4509-A4F8-0D3A2D970B26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC8CF6F5-C08C-49D4-B504-3C6572BEA992}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC8CF6F5-C08C-49D4-B504-3C6572BEA992}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC8CF6F5-C08C-49D4-B504-3C6572BEA992}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC8CF6F5-C08C-49D4-B504-3C6572BEA992}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDE31FD9-D68D-4B74-BDD0-ABFAE9F83730}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDE31FD9-D68D-4B74-BDD0-ABFAE9F83730}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDE31FD9-D68D-4B74-BDD0-ABFAE9F83730}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDE31FD9-D68D-4B74-BDD0-ABFAE9F83730}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F16CD4A9-D873-4E8E-AF81-50CD69348E95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F16CD4A9-D873-4E8E-AF81-50CD69348E95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F16CD4A9-D873-4E8E-AF81-50CD69348E95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F16CD4A9-D873-4E8E-AF81-50CD69348E95}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

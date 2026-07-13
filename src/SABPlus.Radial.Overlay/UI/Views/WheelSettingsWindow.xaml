@@ -1,0 +1,542 @@
+<Window x:Class="SABPlus.Radial.Overlay.UI.Views.WheelSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:SABPlus.Radial.Overlay.UI.Controls"
+        Title="SAB+ — Настройка радиального колеса"
+        Width="1440"
+        Height="860"
+        MinWidth="1180"
+        MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closing="Window_Closing"
+        Closed="Window_Closed"
+        SourceInitialized="Window_SourceInitialized">
+    <Grid Background="{StaticResource SabBrush.WindowBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="96" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="68" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="White"
+                BorderBrush="{StaticResource SabBrush.Border}"
+                BorderThickness="0,0,0,1"
+                Padding="22,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="430" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource SabWindowTitleTextStyle}"
+                               Text="Настройка радиального колеса" />
+                    <TextBlock Margin="0,4,0,0"
+                               Style="{StaticResource SabWindowSubtitleTextStyle}"
+                               Text="Профили стадий, команды, подписи и триггер быстрого вызова." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource SabFieldLabelTextStyle}"
+                               Text="Подключение к Revit" />
+                    <ComboBox x:Name="RevitProcessComboBox"
+                              Height="32"
+                              ItemsSource="{Binding RevitContexts}"
+                              SelectedItem="{Binding SelectedRevitContext, Mode=TwoWay}"
+                              Style="{StaticResource SabComboBoxStyle}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock>
+                                    <Run Text="Revit " />
+                                    <Run Text="{Binding RevitVersion}" />
+                                    <Run Text=" · PID " />
+                                    <Run Text="{Binding ProcessId}" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding ProjectTitle}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Margin="0,3,0,0"
+                               Style="{StaticResource SabFieldHintTextStyle}"
+                               Text="{Binding ConnectionText}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="20,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="326" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="400" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left panel: profiles and global trigger settings. -->
+            <Border Grid.Column="0" Style="{StaticResource SabPanelBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="230" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Style="{StaticResource SabPanelHeaderTextStyle}" Text="Стадии" />
+
+                    <ListBox x:Name="ProfileList"
+                             Grid.Row="1"
+                             Margin="0,12,0,8"
+                             ItemsSource="{Binding Profiles}"
+                             ItemContainerStyle="{StaticResource SabListBoxItemStyle}"
+                             SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                             SelectionChanged="ProfileList_SelectionChanged"
+                             Style="{StaticResource SabListBoxStyle}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="22" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="12"
+                                             Height="12"
+                                             VerticalAlignment="Center"
+                                             Fill="{Binding ColorHex}" />
+                                    <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                        <TextBlock FontWeight="SemiBold"
+                                                   Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock FontSize="11"
+                                                   Foreground="{StaticResource SabBrush.TextSecondary}">
+                                            <Run Text="Команд: " />
+                                            <Run Text="{Binding AssignedCommandCount, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource SabBrush.TextSecondary}"
+                                               Text="{Binding Abbreviation}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="＋" ToolTip="Создать стадию" Style="{StaticResource SabIconButtonStyle}" Click="AddProfile_Click" />
+                        <Button Content="⧉" Margin="5,0,0,0" ToolTip="Дублировать" Style="{StaticResource SabIconButtonStyle}" Click="DuplicateProfile_Click" />
+                        <Button Content="↑" Margin="5,0,0,0" ToolTip="Выше" Style="{StaticResource SabIconButtonStyle}" Click="MoveProfileUp_Click" />
+                        <Button Content="↓" Margin="5,0,0,0" ToolTip="Ниже" Style="{StaticResource SabIconButtonStyle}" Click="MoveProfileDown_Click" />
+                        <Button Content="×" Margin="5,0,0,0" ToolTip="Удалить" Style="{StaticResource SabIconButtonStyle}" Click="DeleteProfile_Click" />
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,8" FontWeight="SemiBold" Text="Свойства стадии" />
+
+                            <TextBlock Style="{StaticResource SabFieldLabelTextStyle}" Text="Название" />
+                            <TextBox Text="{Binding SelectedProfile.Name, UpdateSourceTrigger=PropertyChanged}"
+                                     TextChanged="ProfileProperty_TextChanged"
+                                     Style="{StaticResource SabTextBoxStyle}" />
+
+                            <TextBlock Margin="0,10,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Краткое обозначение" />
+                            <TextBox MaxLength="3"
+                                     Text="{Binding SelectedProfile.Abbreviation, UpdateSourceTrigger=PropertyChanged}"
+                                     TextChanged="ProfileProperty_TextChanged"
+                                     Style="{StaticResource SabTextBoxStyle}" />
+
+                            <TextBlock Margin="0,10,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Цвет" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding SelectedProfile.ColorHex, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="ProfileProperty_TextChanged"
+                                         Style="{StaticResource SabTextBoxStyle}" />
+                                <Button Grid.Column="1" Margin="6,0,0,0" Content="Выбрать" Style="{StaticResource SabNeutralButtonStyle}" Click="ChooseColor_Click" />
+                            </Grid>
+
+                            <TextBlock Margin="0,10,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Максимум команд в стадии" />
+                            <ComboBox x:Name="SectorCountComboBox"
+                                      SelectedItem="{Binding SelectedProfile.SectorCount, Mode=TwoWay}"
+                                      SelectionChanged="SectorCountComboBox_SelectionChanged"
+                                      Style="{StaticResource SabComboBoxStyle}" />
+
+                            <TextBlock Margin="0,14,0,5"
+                                       Style="{StaticResource SabFieldLabelTextStyle}"
+                                       Text="Интервал между командами" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="48" />
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="CapsuleGapSlider"
+                                        Minimum="0"
+                                        Maximum="20"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        VerticalAlignment="Center"
+                                        Value="{Binding WorkingSettings.Geometry.CapsuleGap, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ValueChanged="CapsuleGapSlider_ValueChanged" />
+                                <TextBlock Grid.Column="1"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource SabBrush.TextSecondary}"
+                                           Text="{Binding WorkingSettings.Geometry.CapsuleGap, StringFormat={}{0:0} px}" />
+                            </Grid>
+
+                            <TextBlock Margin="0,14,0,5"
+                                       Style="{StaticResource SabFieldLabelTextStyle}"
+                                       Text="Отступ стадий от центра" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="58" />
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="100" Maximum="260" TickFrequency="2"
+                                        Value="{Binding WorkingSettings.Geometry.StageCapsuleRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ValueChanged="GeometrySlider_ValueChanged" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Foreground="{StaticResource SabBrush.TextSecondary}"
+                                           Text="{Binding WorkingSettings.Geometry.StageCapsuleRadius, StringFormat={}{0:0} px}" />
+                            </Grid>
+
+                            <TextBlock Margin="0,14,0,5"
+                                       Style="{StaticResource SabFieldLabelTextStyle}"
+                                       Text="Отступ команд от центра" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="58" />
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="155" Maximum="320" TickFrequency="2"
+                                        Value="{Binding WorkingSettings.Geometry.CommandCapsuleRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ValueChanged="GeometrySlider_ValueChanged" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Foreground="{StaticResource SabBrush.TextSecondary}"
+                                           Text="{Binding WorkingSettings.Geometry.CommandCapsuleRadius, StringFormat={}{0:0} px}" />
+                            </Grid>
+
+                            <Border Margin="0,18,0,12" BorderBrush="{StaticResource SabBrush.BorderWeak}" BorderThickness="0,1,0,0" />
+                            <TextBlock Margin="0,0,0,10" FontWeight="SemiBold" Text="Оформление колеса" />
+
+                            <TextBlock Style="{StaticResource SabFieldLabelTextStyle}" Text="Заливка капсул" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding WorkingSettings.Geometry.CapsuleFillColorHex, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="GeometryText_TextChanged" Style="{StaticResource SabTextBoxStyle}" />
+                                <Button Grid.Column="1" Margin="8,0,0,0" Tag="CapsuleFillColorHex" Content="Выбрать"
+                                        Style="{StaticResource SabNeutralButtonStyle}" Click="ChooseWheelColor_Click" />
+                            </Grid>
+
+                            <TextBlock Margin="0,12,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Граница капсул" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding WorkingSettings.Geometry.CapsuleBorderColorHex, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="GeometryText_TextChanged" Style="{StaticResource SabTextBoxStyle}" />
+                                <Button Grid.Column="1" Margin="8,0,0,0" Tag="CapsuleBorderColorHex" Content="Выбрать"
+                                        Style="{StaticResource SabNeutralButtonStyle}" Click="ChooseWheelColor_Click" />
+                            </Grid>
+
+                            <TextBlock Margin="0,12,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Заливка центрального круга" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding WorkingSettings.Geometry.CenterFillColorHex, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="GeometryText_TextChanged" Style="{StaticResource SabTextBoxStyle}" />
+                                <Button Grid.Column="1" Margin="8,0,0,0" Tag="CenterFillColorHex" Content="Выбрать"
+                                        Style="{StaticResource SabNeutralButtonStyle}" Click="ChooseWheelColor_Click" />
+                            </Grid>
+
+                            <TextBlock Margin="0,12,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Граница центрального круга" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding WorkingSettings.Geometry.CenterBorderColorHex, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="GeometryText_TextChanged" Style="{StaticResource SabTextBoxStyle}" />
+                                <Button Grid.Column="1" Margin="8,0,0,0" Tag="CenterBorderColorHex" Content="Выбрать"
+                                        Style="{StaticResource SabNeutralButtonStyle}" Click="ChooseWheelColor_Click" />
+                            </Grid>
+
+                            <TextBlock Margin="0,12,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Непрозрачность фона капсул" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
+                                <Slider Minimum="0" Maximum="1" TickFrequency="0.05"
+                                        Value="{Binding WorkingSettings.Geometry.CapsuleFillOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ValueChanged="GeometrySlider_ValueChanged" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Foreground="{StaticResource SabBrush.TextSecondary}"
+                                           Text="{Binding WorkingSettings.Geometry.CapsuleFillOpacity, StringFormat={}{0:P0}}" />
+                            </Grid>
+
+                            <TextBlock Margin="0,12,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Непрозрачность фона круга" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/></Grid.ColumnDefinitions>
+                                <Slider Minimum="0" Maximum="1" TickFrequency="0.05"
+                                        Value="{Binding WorkingSettings.Geometry.CenterFillOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        ValueChanged="GeometrySlider_ValueChanged" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Foreground="{StaticResource SabBrush.TextSecondary}"
+                                           Text="{Binding WorkingSettings.Geometry.CenterFillOpacity, StringFormat={}{0:P0}}" />
+                            </Grid>
+
+                            <Border Margin="0,18,0,12" BorderBrush="{StaticResource SabBrush.BorderWeak}" BorderThickness="0,1,0,0" />
+                            <TextBlock Margin="0,0,0,10" FontWeight="SemiBold" Text="Кнопки вызова" />
+
+                            <Border Style="{StaticResource SabSectionBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="Стадии · ближняя кнопка" />
+                                    <TextBlock Margin="0,10,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Тип" />
+                                    <ComboBox x:Name="StageTriggerTypeComboBox"
+                                              SelectedItem="{Binding WorkingSettings.StageTrigger.Type, Mode=TwoWay}"
+                                              SelectionChanged="StageTriggerTypeComboBox_SelectionChanged"
+                                              Style="{StaticResource SabComboBoxStyle}" />
+                                    <TextBox Margin="0,8,0,0" IsReadOnly="True"
+                                             Text="{Binding StageTriggerDisplayText, Mode=OneWay}"
+                                             Style="{StaticResource SabTextBoxStyle}" />
+                                    <Button Margin="0,8,0,0" Content="Записать клавиши"
+                                            Tag="Stages" Style="{StaticResource SabOutlineButtonStyle}"
+                                            Click="CaptureTrigger_Click" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Style="{StaticResource SabSectionBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="Команды · дальняя кнопка" />
+                                    <TextBlock Margin="0,10,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Тип" />
+                                    <ComboBox x:Name="CommandTriggerTypeComboBox"
+                                              SelectedItem="{Binding WorkingSettings.CommandTrigger.Type, Mode=TwoWay}"
+                                              SelectionChanged="CommandTriggerTypeComboBox_SelectionChanged"
+                                              Style="{StaticResource SabComboBoxStyle}" />
+                                    <TextBox Margin="0,8,0,0" IsReadOnly="True"
+                                             Text="{Binding CommandTriggerDisplayText, Mode=OneWay}"
+                                             Style="{StaticResource SabTextBoxStyle}" />
+                                    <Button Margin="0,8,0,0" Content="Записать клавиши"
+                                            Tag="Commands" Style="{StaticResource SabOutlineButtonStyle}"
+                                            Click="CaptureTrigger_Click" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Center panel: the same wheel control used by the live overlay. -->
+            <Border Grid.Column="2" Style="{StaticResource SabPanelBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="56" />
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource SabPanelHeaderTextStyle}" Text="Предпросмотр" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <ToggleButton x:Name="StagesPreviewButton"
+                                          Content="Стадии"
+                                          IsChecked="{Binding IsStagePreview, Mode=OneWay}"
+                                          Style="{StaticResource SabToggleButtonStyle}"
+                                          Click="StagesPreview_Click" />
+                            <ToggleButton x:Name="CommandsPreviewButton"
+                                          Margin="6,0,0,0"
+                                          Content="Команды"
+                                          IsChecked="{Binding IsCommandPreview, Mode=OneWay}"
+                                          Style="{StaticResource SabToggleButtonStyle}"
+                                          Click="CommandsPreview_Click" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="8">
+                        <Viewbox Stretch="Uniform">
+                            <controls:RadialWheelControl x:Name="EditorWheelControl"
+                                                         Width="640"
+                                                         Height="640"
+                                                         AllowDrop="True"
+                                                         MouseMove="EditorWheelControl_MouseMove"
+                                                         MouseLeave="EditorWheelControl_MouseLeave"
+                                                         PreviewMouseLeftButtonDown="EditorWheelControl_PreviewMouseLeftButtonDown"
+                                                         PreviewMouseMove="EditorWheelControl_PreviewMouseMove"
+                                                         DragOver="EditorWheelControl_DragOver"
+                                                         Drop="EditorWheelControl_Drop" />
+                        </Viewbox>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Background="{StaticResource SabBrush.TableHeaderBackground}"
+                            BorderBrush="{StaticResource SabBrush.BorderWeak}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock FontWeight="SemiBold" Text="{Binding SelectedSectorTitle}" />
+                                <TextBlock Margin="0,2,0,0"
+                                           Style="{StaticResource SabFieldHintTextStyle}"
+                                           Text="Кликните позицию или перетащите в неё команду." />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       Foreground="{StaticResource SabBrush.TextSecondary}"
+                                       Text="{Binding ValidationSummary}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Right panel: command catalog and selected sector properties. -->
+            <Border Grid.Column="4" Style="{StaticResource SabPanelBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="220" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Style="{StaticResource SabPanelHeaderTextStyle}" Text="Каталог команд" />
+
+                    <TextBox Grid.Row="1"
+                             Margin="0,10,0,0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource SabTextBoxStyle}"
+                             ToolTip="Поиск по названию и описанию" />
+
+                    <ComboBox Grid.Row="2"
+                              Margin="0,8,0,0"
+                              ItemsSource="{Binding SourceFilters}"
+                              DisplayMemberPath="Name"
+                              SelectedItem="{Binding SelectedSourceFilter, Mode=TwoWay}"
+                              Style="{StaticResource SabComboBoxStyle}" />
+
+                    <ListBox x:Name="CommandCatalogList"
+                             Grid.Row="3"
+                             Margin="0,14,0,0"
+                             ItemsSource="{Binding FilteredCommands}"
+                             ItemContainerStyle="{StaticResource SabListBoxItemStyle}"
+                             SelectedItem="{Binding SelectedCatalogCommand, Mode=TwoWay}"
+                             PreviewMouseMove="CommandCatalogList_PreviewMouseMove"
+                             Style="{StaticResource SabListBoxStyle}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock FontWeight="SemiBold"
+                                                   Text="{Binding DisplayName}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock FontSize="11"
+                                                   Foreground="{StaticResource SabBrush.TextSecondary}"
+                                                   Text="{Binding Description}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="10"
+                                               Foreground="{StaticResource SabBrush.TextSecondary}"
+                                               Text="{Binding SourceDisplayName}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="4" Margin="0,12,0,12" Orientation="Horizontal">
+                        <Button Content="Добавить"
+                                Style="{StaticResource SabOutlineButtonStyle}"
+                                Click="AssignSelectedCommand_Click" />
+                        <Button Margin="8,0,0,0"
+                                Content="Заменить"
+                                Style="{StaticResource SabNeutralButtonStyle}"
+                                Click="ReplaceSelectedCommand_Click" />
+                        <Button Margin="8,0,0,0"
+                                Content="Проверить"
+                                Style="{StaticResource SabNeutralButtonStyle}"
+                                Click="VerifySelectedCommand_Click" />
+                    </StackPanel>
+
+                    <Border Grid.Row="5"
+                            BorderBrush="{StaticResource SabBrush.BorderWeak}"
+                            BorderThickness="0,1,0,0"
+                            Padding="0,12,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Margin="0,0,0,10" FontWeight="SemiBold" Text="Свойства позиции" />
+
+                                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                                    <Button Content="← Раньше" Style="{StaticResource SabNeutralButtonStyle}"
+                                            Click="MoveSlotEarlier_Click" />
+                                    <Button Margin="8,0,0,0" Content="Позже →" Style="{StaticResource SabNeutralButtonStyle}"
+                                            Click="MoveSlotLater_Click" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource SabFieldLabelTextStyle}" Text="Отображаемое название" />
+                                <TextBox Text="{Binding SelectedSlot.DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="SlotProperty_TextChanged"
+                                         Style="{StaticResource SabTextBoxStyle}" />
+
+                                <TextBlock Margin="0,9,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Краткая подпись" />
+                                <TextBox Text="{Binding SelectedSlot.ShortLabel, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="SlotProperty_TextChanged"
+                                         Style="{StaticResource SabTextBoxStyle}" />
+
+                                <TextBlock Margin="0,9,0,5" Style="{StaticResource SabFieldLabelTextStyle}" Text="Подсказка" />
+                                <TextBox Height="56"
+                                         AcceptsReturn="True"
+                                         Padding="8,5"
+                                         TextWrapping="Wrap"
+                                         VerticalContentAlignment="Top"
+                                         Text="{Binding SelectedSlot.ToolTip, UpdateSourceTrigger=PropertyChanged}"
+                                         TextChanged="SlotProperty_TextChanged"
+                                         Style="{StaticResource SabTextBoxStyle}" />
+
+                                <Button Margin="0,16,0,0"
+                                        Content="Очистить позицию"
+                                        Style="{StaticResource SabDangerButtonStyle}"
+                                        Click="ClearSelectedSlot_Click" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Background="White"
+                BorderBrush="{StaticResource SabBrush.Border}"
+                BorderThickness="0,1,0,0"
+                Padding="18,12">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Импорт" Style="{StaticResource SabNeutralButtonStyle}" Click="Import_Click" />
+                    <Button Margin="7,0,0,0" Content="Экспорт" Style="{StaticResource SabNeutralButtonStyle}" Click="Export_Click" />
+                    <Button Margin="7,0,0,0" Content="Восстановить" Style="{StaticResource SabNeutralButtonStyle}" Click="Restore_Click" />
+                    <Button Margin="7,0,0,0" Content="Тест" Style="{StaticResource SabOutlineButtonStyle}" Click="Test_Click" />
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button Content="Отмена" Style="{StaticResource SabNeutralButtonStyle}" Click="Cancel_Click" />
+                    <Button Margin="8,0,0,0" MinWidth="118" Content="Сохранить" Style="{StaticResource SabPrimaryButtonStyle}" Click="Save_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

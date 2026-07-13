@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>SABPlus.RevitBridge</AssemblyName>
+    <RootNamespace>SABPlus.RevitBridge</RootNamespace>
+    <OutputType>Library</OutputType>
+    <RevitApiDir Condition="'$(RevitApiDir)' == '' and '$(REVIT_API_DIR)' != ''">$(REVIT_API_DIR)</RevitApiDir>
+    <RevitApiDir Condition="'$(RevitApiDir)' == ''">$(ProgramW6432)\Autodesk\Revit 2023</RevitApiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SABPlus.Radial.Core\SABPlus.Radial.Core.csproj" />
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <EmbeddedResource Include="..\..\assets\CommandRing_16.png" LogicalName="SABPlus.Assets.CommandRing_16.png" />
+    <EmbeddedResource Include="..\..\assets\CommandRing_32.png" LogicalName="SABPlus.Assets.CommandRing_32.png" />
+  </ItemGroup>
+</Project>
