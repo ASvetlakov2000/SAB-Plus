@@ -39,6 +39,25 @@ namespace SABPlus.RevitBridge.Services
         public void UpdateContext(UIApplication uiApplication)
         {
             _contextProvider.Update(uiApplication);
+
+            string requestId;
+            string failureMessage;
+            if (_commandHandler.TryPrepareDeferredCommand(
+                    uiApplication,
+                    out requestId,
+                    out failureMessage))
+            {
+                ExternalEventRequest raiseResult = _externalEvent.Raise();
+                if (raiseResult != ExternalEventRequest.Accepted)
+                {
+                    _commandHandler.RestorePreparedCommand(requestId);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(failureMessage))
+            {
+                _contextProvider.SetLastCommandMessage(failureMessage);
+                TaskDialog.Show("SAB+ Радиальное колесо", failureMessage);
+            }
         }
 
         public void Dispose()

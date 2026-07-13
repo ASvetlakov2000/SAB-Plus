@@ -11,6 +11,9 @@ namespace SABPlus.RevitBridge.Services
         private readonly object _sync = new object();
         private readonly RevitContextSnapshotProvider _contextProvider;
         private BridgeRequest _pendingRequest;
+        private BridgeRequest _deferredRequest;
+        private DateTime _deferredDeadlineUtc;
+        private bool _isExecuting;
 
         public RevitCommandExternalEventHandler(RevitContextSnapshotProvider contextProvider)
         {
@@ -32,7 +35,7 @@ namespace SABPlus.RevitBridge.Services
 
             lock (_sync)
             {
-                if (_pendingRequest != null)
+                if (_pendingRequest != null || _deferredRequest != null || _isExecuting)
                 {
                     message = "Предыдущая команда ещё ожидает выполнения в Revit.";
                     return false;
@@ -55,16 +58,108 @@ namespace SABPlus.RevitBridge.Services
                     _pendingRequest = null;
                     _contextProvider.SetCommandQueueBusy(false);
                 }
+
+                if (_deferredRequest != null &&
+                    string.Equals(_deferredRequest.RequestId, requestId, StringComparison.Ordinal))
+                {
+                    _deferredRequest = null;
+                    _contextProvider.SetCommandQueueBusy(false);
+                }
+            }
+        }
+
+        public bool TryPrepareDeferredCommand(
+            UIApplication app,
+            out string requestId,
+            out string failureMessage)
+        {
+            requestId = string.Empty;
+            failureMessage = string.Empty;
+            BridgeRequest deferred;
+            lock (_sync)
+            {
+                deferred = _deferredRequest;
+            }
+
+            if (deferred == null)
+            {
+                return false;
+            }
+
+            if (DateTime.UtcNow > _deferredDeadlineUtc)
+            {
+                lock (_sync)
+                {
+                    if (_deferredRequest != null &&
+                        string.Equals(_deferredRequest.RequestId, deferred.RequestId, StringComparison.Ordinal))
+                    {
+                        _deferredRequest = null;
+                    }
+                }
+
+                _contextProvider.SetCommandQueueBusy(false);
+                failureMessage = "Revit не завершил предыдущую команду за отведённое время.";
+                return false;
+            }
+
+            string validationMessage;
+            RevitCommandId commandId = ResolveCommandId(deferred.Command, out validationMessage);
+            if (commandId == null)
+            {
+                lock (_sync)
+                {
+                    _deferredRequest = null;
+                }
+
+                _contextProvider.SetCommandQueueBusy(false);
+                failureMessage = validationMessage;
+                return false;
+            }
+
+            if (app == null || !app.CanPostCommand(commandId))
+            {
+                return false;
+            }
+
+            lock (_sync)
+            {
+                if (_deferredRequest == null ||
+                    !string.Equals(_deferredRequest.RequestId, deferred.RequestId, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                _pendingRequest = _deferredRequest;
+                _deferredRequest = null;
+                requestId = _pendingRequest.RequestId;
+                return true;
+            }
+        }
+
+        public void RestorePreparedCommand(string requestId)
+        {
+            lock (_sync)
+            {
+                if (_pendingRequest == null ||
+                    !string.Equals(_pendingRequest.RequestId, requestId, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                _deferredRequest = _pendingRequest;
+                _pendingRequest = null;
             }
         }
 
         public void Execute(UIApplication app)
         {
             BridgeRequest request;
+            bool keepQueueBusy = false;
             lock (_sync)
             {
                 request = _pendingRequest;
                 _pendingRequest = null;
+                _isExecuting = request != null;
             }
 
             if (request == null)
@@ -108,15 +203,41 @@ namespace SABPlus.RevitBridge.Services
                     return;
                 }
 
-                if (!app.CanPostCommand(commandId))
+                if (string.Equals(request.RequestType, BridgeRequestTypes.VerifyCommand, StringComparison.Ordinal))
                 {
-                    ShowUnavailable("Команда недоступна в текущем контексте Revit: " + request.Command.DisplayName);
+                    if (!app.CanPostCommand(commandId))
+                    {
+                        ShowUnavailable("Команда недоступна в текущем контексте Revit: " + request.Command.DisplayName);
+                        return;
+                    }
+
+                    _contextProvider.SetLastCommandMessage("Команда доступна: " + request.Command.DisplayName);
                     return;
                 }
 
-                if (string.Equals(request.RequestType, BridgeRequestTypes.VerifyCommand, StringComparison.Ordinal))
+                // Revit permits one PostCommand per API context. When an interactive command
+                // is active, cancel it now and post the wheel command from the next ExternalEvent.
+                RevitCommandId cancelCommandId = RevitCommandId.LookupCommandId("ID_CANCEL");
+                if (cancelCommandId != null &&
+                    commandId.Id != cancelCommandId.Id &&
+                    app.CanPostCommand(cancelCommandId))
                 {
-                    _contextProvider.SetLastCommandMessage("Команда доступна: " + request.Command.DisplayName);
+                    app.PostCommand(cancelCommandId);
+                    lock (_sync)
+                    {
+                        _deferredRequest = request;
+                        _deferredDeadlineUtc = DateTime.UtcNow.AddSeconds(8.0);
+                    }
+
+                    keepQueueBusy = true;
+                    _contextProvider.SetLastCommandMessage(
+                        "Предыдущая команда Revit отменяется. Ожидает запуска: " + request.Command.DisplayName);
+                    return;
+                }
+
+                if (!app.CanPostCommand(commandId))
+                {
+                    ShowUnavailable("Команда недоступна в текущем контексте Revit: " + request.Command.DisplayName);
                     return;
                 }
 
@@ -132,7 +253,15 @@ namespace SABPlus.RevitBridge.Services
             }
             finally
             {
-                _contextProvider.SetCommandQueueBusy(false);
+                lock (_sync)
+                {
+                    _isExecuting = false;
+                }
+
+                if (!keepQueueBusy)
+                {
+                    _contextProvider.SetCommandQueueBusy(false);
+                }
             }
         }
 

@@ -131,6 +131,21 @@ namespace SABPlus.Radial.Core.Services
                 settings.Geometry.CapsuleFillOpacity = defaults.CapsuleFillOpacity;
                 settings.Geometry.CenterFillOpacity = defaults.CenterFillOpacity;
             }
+
+            WheelGeometrySettings geometryDefaults = new WheelGeometrySettings();
+            if (sourceSchemaVersion < 6)
+            {
+                // Version 6 adds independent capsule text and hover colors.
+                settings.Geometry.CapsuleTextColorHex = geometryDefaults.CapsuleTextColorHex;
+                settings.Geometry.CapsuleHoverFillColorHex = geometryDefaults.CapsuleHoverFillColorHex;
+            }
+
+            settings.Geometry.CapsuleTextColorHex = string.IsNullOrWhiteSpace(settings.Geometry.CapsuleTextColorHex)
+                ? geometryDefaults.CapsuleTextColorHex
+                : settings.Geometry.CapsuleTextColorHex;
+            settings.Geometry.CapsuleHoverFillColorHex = string.IsNullOrWhiteSpace(settings.Geometry.CapsuleHoverFillColorHex)
+                ? geometryDefaults.CapsuleHoverFillColorHex
+                : settings.Geometry.CapsuleHoverFillColorHex;
             settings.Profiles = settings.Profiles ?? new List<WheelProfile>();
             settings.CommandCatalog = settings.CommandCatalog ?? new List<CommandDescriptor>();
             NormalizePostableCommandCatalog(settings);
@@ -213,6 +228,8 @@ namespace SABPlus.Radial.Core.Services
 
             if (!IsValidColor(geometry.CapsuleFillColorHex) ||
                 !IsValidColor(geometry.CapsuleBorderColorHex) ||
+                !IsValidColor(geometry.CapsuleTextColorHex) ||
+                !IsValidColor(geometry.CapsuleHoverFillColorHex) ||
                 !IsValidColor(geometry.CenterFillColorHex) ||
                 !IsValidColor(geometry.CenterBorderColorHex))
             {
@@ -332,23 +349,6 @@ namespace SABPlus.Radial.Core.Services
 
         private static void NormalizePostableCommandCatalog(WheelSettings settings)
         {
-            HashSet<string> assignedCommandIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (WheelProfile profile in settings.Profiles)
-            {
-                if (profile?.Slots == null)
-                {
-                    continue;
-                }
-
-                foreach (WheelSlot slot in profile.Slots)
-                {
-                    if (slot != null && !string.IsNullOrWhiteSpace(slot.CommandId))
-                    {
-                        assignedCommandIds.Add(slot.CommandId);
-                    }
-                }
-            }
-
             Dictionary<string, CommandDescriptor> commandsByApiName =
                 new Dictionary<string, CommandDescriptor>(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, string> replacementIds =
@@ -375,12 +375,6 @@ namespace SABPlus.Radial.Core.Services
                     normalizedApiName,
                     out russianName,
                     out russianDescription);
-
-                // Old auto-generated entries are removed when they are not used in any profile.
-                if (!isLocalized && !assignedCommandIds.Contains(command.Id ?? string.Empty))
-                {
-                    continue;
-                }
 
                 command.RevitPostableCommandName = normalizedApiName;
                 if (isLocalized)

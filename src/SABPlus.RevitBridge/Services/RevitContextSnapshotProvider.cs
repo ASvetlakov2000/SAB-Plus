@@ -14,6 +14,8 @@ namespace SABPlus.RevitBridge.Services
     {
         private readonly object _sync = new object();
         private RevitContextSnapshot _snapshot;
+        private bool _commandLocalizationInitialized;
+        private int _commandLocalizationAttempts;
 
         public RevitContextSnapshotProvider()
         {
@@ -41,6 +43,27 @@ namespace SABPlus.RevitBridge.Services
             updated.ProcessId = Process.GetCurrentProcess().Id;
             updated.RevitVersion = uiApplication.Application?.VersionNumber ?? string.Empty;
             updated.CapturedUtc = DateTime.UtcNow;
+
+            if (!_commandLocalizationInitialized)
+            {
+                RevitRibbonCommandLocalizationResult localization =
+                    RevitRibbonCommandLocalizationService.ReadRussianRibbonNames();
+                _commandLocalizationAttempts++;
+                if (localization.RibbonItemCount > 0 || _commandLocalizationAttempts >= 20)
+                {
+                    updated.PostableCommandDisplayNames = localization.DisplayNames;
+                    _commandLocalizationInitialized = true;
+
+#if DEBUG
+                    TaskDialog.Show(
+                        "SAB+ — Отладка каталога команд",
+                        "Шаг 1. Команд PostableCommand найдено: " + updated.PostableCommandNames.Count + ".\n" +
+                        "Шаг 2. Элементов ленты с подписями прочитано: " + localization.RibbonItemCount + ".\n" +
+                        "Шаг 3. Русских подписей сопоставлено: " + localization.MatchedCommandCount + ".\n" +
+                        "Шаг 4. Остальные команды будут показаны с русским резервным названием.");
+#endif
+                }
+            }
 
             UIDocument uiDocument = uiApplication.ActiveUIDocument;
             Document document = uiDocument?.Document;

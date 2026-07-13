@@ -17,6 +17,7 @@ namespace SABPlus.Radial.Core.SmokeTests
                 TestDirectionalGeometry();
                 TestCentralZones();
                 TestCapsuleLayouts();
+                TestEqualVisualClearanceAndFixedSizes();
                 TestAssignedCommandLayout();
                 TestReturnToStageZone();
                 TestDynamicCapsuleWidths();
@@ -48,7 +49,7 @@ namespace SABPlus.Radial.Core.SmokeTests
             Assert(settings.CommandTrigger.Type == WheelTriggerType.MouseXButton2,
                 "Команды по умолчанию должны открываться XButton2.");
             Assert(settings.Profiles.All(profile => profile.SectorCount == 8), "Стандартные профили должны содержать 8 секторов.");
-            Assert(settings.SchemaVersion == 5, "Раздельные триггеры и оформление должны использовать пятую версию схемы.");
+            Assert(settings.SchemaVersion == 6, "Цвета текста и наведения должны использовать шестую версию схемы.");
         }
 
         private static void TestDirectionalGeometry()
@@ -95,12 +96,21 @@ namespace SABPlus.Radial.Core.SmokeTests
             Assert(stageCenter.Kind == WheelHitKind.None, "Внутри порога стадий не должно выбираться направление.");
 
             WheelHitResult gap = WheelGeometryCalculator.HitTest(
-                120.0,
+                80.0,
                 0.0,
                 8,
                 WheelDisplayLevel.Commands,
                 geometry);
             Assert(gap.Kind == WheelHitKind.None, "Между центральным возвратом и командами должна быть нейтральная зона.");
+
+            WheelHitResult selectionZone = WheelGeometryCalculator.HitTest(
+                105.0,
+                0.0,
+                8,
+                WheelDisplayLevel.Commands,
+                geometry);
+            Assert(selectionZone.Kind == WheelHitKind.Sector,
+                "Секторная зона должна выбирать команду до достижения центра капсулы.");
         }
 
         private static void TestCapsuleLayouts()
@@ -159,6 +169,42 @@ namespace SABPlus.Radial.Core.SmokeTests
             Assert(layouts.Count == 2, "Две назначенные команды должны образовывать две видимые капсулы.");
             Assert(layouts[0].Center.Y < 0.0 && layouts[1].Center.Y > 0.0,
                 "Две команды должны равномерно размещаться сверху и снизу.");
+        }
+
+        private static void TestEqualVisualClearanceAndFixedSizes()
+        {
+            WheelGeometrySettings geometry = new WheelGeometrySettings();
+            var layouts = WheelGeometryCalculator.CreateCapsuleLayouts(
+                3,
+                WheelCapsuleLevel.Command,
+                geometry,
+                0.0);
+
+            double expectedInnerEdgeRadius = layouts[0].Radius - (layouts[0].Height / 2.0);
+            foreach (WheelCapsuleLayout layout in layouts)
+            {
+                double radians = layout.CenterAngleDegrees * Math.PI / 180.0;
+                double radialExtent = (layout.Height / 2.0) +
+                                      (((layout.Width - layout.Height) / 2.0) * Math.Abs(Math.Cos(radians)));
+                double innerEdgeRadius = layout.Radius - radialExtent;
+                Assert(Math.Abs(innerEdgeRadius - expectedInnerEdgeRadius) < 0.001,
+                    "Все капсулы должны иметь одинаковый видимый отступ от центра.");
+            }
+
+            double originalHeight = layouts[0].Height;
+            double originalWidth = layouts[0].Width;
+            double originalCenterRadius = geometry.CenterRingOuterRadius;
+            geometry.CommandCapsuleRadius += 60.0;
+            var movedLayouts = WheelGeometryCalculator.CreateCapsuleLayouts(
+                3,
+                WheelCapsuleLevel.Command,
+                geometry,
+                0.0);
+            Assert(Math.Abs(movedLayouts[0].Height - originalHeight) < 0.001 &&
+                   Math.Abs(movedLayouts[0].Width - originalWidth) < 0.001,
+                "Отступ от центра не должен менять размеры капсул.");
+            Assert(Math.Abs(geometry.CenterRingOuterRadius - originalCenterRadius) < 0.001,
+                "Отступ от центра не должен менять размер центрального круга.");
         }
 
         private static void TestReturnToStageZone()
@@ -235,10 +281,19 @@ namespace SABPlus.Radial.Core.SmokeTests
                 "Непрозрачность капсул должна иметь рабочее значение по умолчанию.");
             Assert(settings.Geometry.CenterFillOpacity > 0.0 && settings.Geometry.CenterFillOpacity <= 1.0,
                 "Непрозрачность центрального круга должна иметь рабочее значение по умолчанию.");
+            Assert(settings.Geometry.CapsuleTextColorHex == "#FFFFFF",
+                "Цвет текста капсул должен иметь рабочее значение по умолчанию.");
+            Assert(settings.Geometry.CapsuleHoverFillColorHex == "#0F6CBD",
+                "Цвет наведения должен иметь рабочее значение по умолчанию.");
 
             settings.Geometry.CapsuleFillOpacity = 1.1;
             WheelSettingsValidationResult invalid = WheelSettingsValidator.Validate(settings);
             Assert(!invalid.IsValid, "Непрозрачность выше 100% должна отклоняться валидатором.");
+
+            settings = WheelSettingsFactory.CreateDefault();
+            settings.Geometry.CapsuleTextColorHex = "white";
+            invalid = WheelSettingsValidator.Validate(settings);
+            Assert(!invalid.IsValid, "Цвет текста вне формата #RRGGBB должен отклоняться валидатором.");
         }
 
         private static void TestPostableCommandLocalizationAndMigration()
@@ -250,6 +305,11 @@ namespace SABPlus.Radial.Core.SmokeTests
                 "API-команда ArchitecturalWall должна показываться с русским названием.");
             Assert(settings.CommandCatalog.All(item => item.RevitPostableCommandName != "Wall"),
                 "Устаревшая команда Wall не должна попадать в новый каталог.");
+            CommandDescriptor generated = RevitPostableCommandCatalog.CreateDescriptor("EnergyAnalysis");
+            Assert(!string.IsNullOrWhiteSpace(generated.DisplayName) &&
+                   generated.DisplayName.All(character => !((character >= 'A' && character <= 'Z') ||
+                                                             (character >= 'a' && character <= 'z'))),
+                "Неизвестная API-команда должна получать русское резервное название.");
 
             settings.SchemaVersion = 4;
             settings.StageTrigger = null;

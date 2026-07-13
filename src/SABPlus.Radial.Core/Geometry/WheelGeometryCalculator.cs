@@ -138,7 +138,11 @@ namespace SABPlus.Radial.Core.Geometry
                     return new WheelHitResult(WheelHitKind.Cancel, -1, distance, angle);
                 }
 
-                if (distance < settings.CommandActivationRadius)
+                // Command capsules are visual targets only. The actual hit area starts shortly
+                // outside the center and continues through the whole angular sector, so the user
+                // does not have to place the cursor exactly over a capsule.
+                double commandSelectionStartRadius = GetCommandSelectionStartRadius(settings);
+                if (distance < commandSelectionStartRadius)
                 {
                     return new WheelHitResult(WheelHitKind.None, -1, distance, angle);
                 }
@@ -146,6 +150,17 @@ namespace SABPlus.Radial.Core.Geometry
 
             int sectorIndex = GetSectorIndex(angle, sectorCount);
             return new WheelHitResult(WheelHitKind.Sector, sectorIndex, distance, angle);
+        }
+
+        public static double GetCommandSelectionStartRadius(WheelGeometrySettings settings)
+        {
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            double comfortableStartRadius = settings.CenterRingOuterRadius + 24.0;
+            return Math.Min(settings.CommandActivationRadius, comfortableStartRadius);
         }
 
         public static int GetSectorIndex(double normalizedAngleDegrees, int sectorCount)
@@ -192,11 +207,16 @@ namespace SABPlus.Radial.Core.Geometry
             List<WheelCapsuleLayout> layouts = new List<WheelCapsuleLayout>();
             double itemAngle = 360.0 / itemCount;
             double width = GetCapsuleWidth(itemCount, level, settings);
-            double radius = Math.Max(GetCapsuleRadius(itemCount, level, settings), minimumRadius);
+            double baseRadius = Math.Max(GetCapsuleRadius(itemCount, level, settings), minimumRadius);
 
             for (int index = 0; index < itemCount; index++)
             {
                 double centerAngle = -90.0 + (index * itemAngle);
+                double radius = GetEqualClearanceCenterRadius(
+                    baseRadius,
+                    centerAngle,
+                    width,
+                    settings.CapsuleHeight);
                 PointD center = PointOnCircle(centerAngle, radius);
                 layouts.Add(new WheelCapsuleLayout(
                     index,
@@ -221,11 +241,16 @@ namespace SABPlus.Radial.Core.Geometry
             int itemCount = capsuleWidths.Count;
             List<WheelCapsuleLayout> layouts = new List<WheelCapsuleLayout>();
             double itemAngle = 360.0 / itemCount;
-            double radius = Math.Max(GetCapsuleRadius(capsuleWidths, level, settings), minimumRadius);
+            double baseRadius = Math.Max(GetCapsuleRadius(capsuleWidths, level, settings), minimumRadius);
 
             for (int index = 0; index < itemCount; index++)
             {
                 double centerAngle = -90.0 + (index * itemAngle);
+                double radius = GetEqualClearanceCenterRadius(
+                    baseRadius,
+                    centerAngle,
+                    capsuleWidths[index],
+                    settings.CapsuleHeight);
                 PointD center = PointOnCircle(centerAngle, radius);
                 layouts.Add(new WheelCapsuleLayout(
                     index,
@@ -372,18 +397,25 @@ namespace SABPlus.Radial.Core.Geometry
             double maximumExtent = settings.CenterRingOuterRadius;
             if (stageCount > 0)
             {
-                double stageRadius = GetCapsuleRadius(stageCount, WheelCapsuleLevel.Stage, settings);
-                double stageWidth = GetCapsuleWidth(stageCount, WheelCapsuleLevel.Stage, settings);
-                maximumExtent = Math.Max(maximumExtent, stageRadius + GetHalfDiagonal(stageWidth, settings.CapsuleHeight));
+                IReadOnlyList<WheelCapsuleLayout> stageLayouts = CreateCapsuleLayouts(
+                    stageCount,
+                    WheelCapsuleLevel.Stage,
+                    settings,
+                    0.0);
+                maximumExtent = Math.Max(maximumExtent, GetMaximumLayoutExtent(stageLayouts));
             }
 
             if (commandCount > 0)
             {
-                double commandRadius = reserveExpandedCommandRing && stageCount > 0
+                double minimumCommandRadius = reserveExpandedCommandRing && stageCount > 0
                     ? GetExpandedCommandRadius(stageCount, commandCount, settings)
-                    : GetCapsuleRadius(commandCount, WheelCapsuleLevel.Command, settings);
-                double commandWidth = GetCapsuleWidth(commandCount, WheelCapsuleLevel.Command, settings);
-                maximumExtent = Math.Max(maximumExtent, commandRadius + GetHalfDiagonal(commandWidth, settings.CapsuleHeight));
+                    : 0.0;
+                IReadOnlyList<WheelCapsuleLayout> commandLayouts = CreateCapsuleLayouts(
+                    commandCount,
+                    WheelCapsuleLevel.Command,
+                    settings,
+                    minimumCommandRadius);
+                maximumExtent = Math.Max(maximumExtent, GetMaximumLayoutExtent(commandLayouts));
             }
 
             return Math.Ceiling((maximumExtent + settings.WindowPadding) * 2.0);
@@ -433,15 +465,32 @@ namespace SABPlus.Radial.Core.Geometry
             return new PointD(Math.Cos(radians) * radius, Math.Sin(radians) * radius);
         }
 
+        public static double GetEqualClearanceCenterRadius(
+            double topCapsuleCenterRadius,
+            double angleDegrees,
+            double capsuleWidth,
+            double capsuleHeight)
+        {
+            if (topCapsuleCenterRadius <= 0.0 || capsuleWidth <= 0.0 || capsuleHeight <= 0.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(topCapsuleCenterRadius));
+            }
+
+            // A horizontal capsule is a line segment with two semicircular ends. Its radial
+            // extent is the support function below. Keeping the inner edge radius constant
+            // removes the apparent offset difference between top, side and diagonal capsules.
+            double radians = angleDegrees * Math.PI / 180.0;
+            double halfHeight = capsuleHeight / 2.0;
+            double straightHalfLength = Math.Max(0.0, (capsuleWidth - capsuleHeight) / 2.0);
+            double radialExtent = halfHeight + (straightHalfLength * Math.Abs(Math.Cos(radians)));
+            double innerEdgeRadius = topCapsuleCenterRadius - halfHeight;
+            return innerEdgeRadius + radialExtent;
+        }
+
         public static double NormalizeDegrees(double angleDegrees)
         {
             double result = angleDegrees % 360.0;
             return result < 0.0 ? result + 360.0 : result;
-        }
-
-        private static double GetHalfDiagonal(double width, double height)
-        {
-            return Math.Sqrt((width * width) + (height * height)) / 2.0;
         }
 
         private static double GetMaximumLayoutExtent(
@@ -475,12 +524,22 @@ namespace SABPlus.Radial.Core.Geometry
             for (int stageIndex = 0; stageIndex < stageCount; stageIndex++)
             {
                 double stageAngle = -90.0 + (stageIndex * (360.0 / stageCount));
-                PointD stageCenter = PointOnCircle(stageAngle, stageRadius);
+                double adjustedStageRadius = GetEqualClearanceCenterRadius(
+                    stageRadius,
+                    stageAngle,
+                    stageWidth,
+                    settings.CapsuleHeight);
+                PointD stageCenter = PointOnCircle(stageAngle, adjustedStageRadius);
 
                 for (int commandIndex = 0; commandIndex < commandCount; commandIndex++)
                 {
                     double commandAngle = -90.0 + (commandIndex * (360.0 / commandCount));
-                    PointD commandCenter = PointOnCircle(commandAngle, commandRadius);
+                    double adjustedCommandRadius = GetEqualClearanceCenterRadius(
+                        commandRadius,
+                        commandAngle,
+                        commandWidth,
+                        settings.CapsuleHeight);
+                    PointD commandCenter = PointOnCircle(commandAngle, adjustedCommandRadius);
                     double horizontalDistance = Math.Abs(stageCenter.X - commandCenter.X);
                     double verticalDistance = Math.Abs(stageCenter.Y - commandCenter.Y);
 
@@ -512,12 +571,22 @@ namespace SABPlus.Radial.Core.Geometry
             for (int firstIndex = 0; firstIndex < itemCount; firstIndex++)
             {
                 double firstAngle = -90.0 + (firstIndex * (360.0 / itemCount));
-                PointD firstCenter = PointOnCircle(firstAngle, radius);
+                double firstRadius = GetEqualClearanceCenterRadius(
+                    radius,
+                    firstAngle,
+                    width,
+                    settings.CapsuleHeight);
+                PointD firstCenter = PointOnCircle(firstAngle, firstRadius);
 
                 for (int secondIndex = firstIndex + 1; secondIndex < itemCount; secondIndex++)
                 {
                     double secondAngle = -90.0 + (secondIndex * (360.0 / itemCount));
-                    PointD secondCenter = PointOnCircle(secondAngle, radius);
+                    double secondRadius = GetEqualClearanceCenterRadius(
+                        radius,
+                        secondAngle,
+                        width,
+                        settings.CapsuleHeight);
+                    PointD secondCenter = PointOnCircle(secondAngle, secondRadius);
                     double horizontalDistance = Math.Abs(firstCenter.X - secondCenter.X);
                     double verticalDistance = Math.Abs(firstCenter.Y - secondCenter.Y);
 
@@ -547,12 +616,22 @@ namespace SABPlus.Radial.Core.Geometry
             for (int firstIndex = 0; firstIndex < itemCount; firstIndex++)
             {
                 double firstAngle = -90.0 + (firstIndex * (360.0 / itemCount));
-                PointD firstCenter = PointOnCircle(firstAngle, radius);
+                double firstRadius = GetEqualClearanceCenterRadius(
+                    radius,
+                    firstAngle,
+                    capsuleWidths[firstIndex],
+                    settings.CapsuleHeight);
+                PointD firstCenter = PointOnCircle(firstAngle, firstRadius);
 
                 for (int secondIndex = firstIndex + 1; secondIndex < itemCount; secondIndex++)
                 {
                     double secondAngle = -90.0 + (secondIndex * (360.0 / itemCount));
-                    PointD secondCenter = PointOnCircle(secondAngle, radius);
+                    double secondRadius = GetEqualClearanceCenterRadius(
+                        radius,
+                        secondAngle,
+                        capsuleWidths[secondIndex],
+                        settings.CapsuleHeight);
+                    PointD secondCenter = PointOnCircle(secondAngle, secondRadius);
                     double minimumHorizontalDistance =
                         ((capsuleWidths[firstIndex] + capsuleWidths[secondIndex]) / 2.0) +
                         settings.CapsuleGap;

@@ -440,10 +440,15 @@ namespace SABPlus.Radial.Overlay.UI.ViewModels
             }
 
             int assignedPosition = assignedIndexes.IndexOf(SelectedSlotIndex);
-            int targetPosition = assignedPosition + offset;
-            if (assignedPosition < 0 || targetPosition < 0 || targetPosition >= assignedIndexes.Count)
+            if (assignedPosition < 0 || assignedIndexes.Count < 2)
             {
                 return;
+            }
+
+            int targetPosition = (assignedPosition + offset) % assignedIndexes.Count;
+            if (targetPosition < 0)
+            {
+                targetPosition += assignedIndexes.Count;
             }
 
             SwapSlots(SelectedSlotIndex, assignedIndexes[targetPosition]);
@@ -463,7 +468,7 @@ namespace SABPlus.Radial.Overlay.UI.ViewModels
         {
             WheelSettings snapshot = JsonSerialization.DeepClone(_workingSettings);
             snapshot.Profiles = Profiles.Select(item => JsonSerialization.DeepClone(item)).ToList();
-            snapshot.CommandCatalog = _workingSettings.CommandCatalog
+            snapshot.CommandCatalog = CatalogCommands
                 .Select(item => JsonSerialization.DeepClone(item))
                 .ToList();
             WheelSettingsValidator.Normalize(snapshot);
@@ -556,28 +561,35 @@ namespace SABPlus.Radial.Overlay.UI.ViewModels
                 return;
             }
 
-            HashSet<string> knownNames = new HashSet<string>(
-                CatalogCommands
-                    .Where(item => item.Source == WheelCommandSource.RevitPostable)
-                    .Select(item => RevitPostableCommandCatalog.NormalizeApiName(item.RevitPostableCommandName)),
-                StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, CommandDescriptor> commandsByApiName = CatalogCommands
+                .Where(item => item.Source == WheelCommandSource.RevitPostable)
+                .GroupBy(
+                    item => RevitPostableCommandCatalog.NormalizeApiName(item.RevitPostableCommandName),
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
             foreach (string commandName in context.PostableCommandNames.OrderBy(item => item))
             {
                 string normalizedName = RevitPostableCommandCatalog.NormalizeApiName(commandName);
-                string russianName;
-                string russianDescription;
-                if (!RevitPostableCommandCatalog.TryGetRussianText(
-                        normalizedName,
-                        out russianName,
-                        out russianDescription) ||
-                    knownNames.Contains(normalizedName))
+                string ribbonLabel = string.Empty;
+                if (context.PostableCommandDisplayNames != null)
                 {
+                    context.PostableCommandDisplayNames.TryGetValue(normalizedName, out ribbonLabel);
+                }
+
+                CommandDescriptor localizedDescriptor =
+                    RevitPostableCommandCatalog.CreateDescriptor(normalizedName, ribbonLabel);
+                CommandDescriptor existing;
+                if (commandsByApiName.TryGetValue(normalizedName, out existing))
+                {
+                    existing.DisplayName = localizedDescriptor.DisplayName;
+                    existing.Description = localizedDescriptor.Description;
+                    existing.RevitPostableCommandName = normalizedName;
                     continue;
                 }
 
-                CatalogCommands.Add(RevitPostableCommandCatalog.CreateDescriptor(normalizedName));
-                knownNames.Add(normalizedName);
+                CatalogCommands.Add(localizedDescriptor);
+                commandsByApiName.Add(normalizedName, localizedDescriptor);
             }
 
             FilteredCommands.Refresh();

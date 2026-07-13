@@ -3,6 +3,7 @@ using SABPlus.Radial.Core.Geometry;
 using SABPlus.Radial.Core.Models;
 using SABPlus.Radial.Core.Services;
 using SABPlus.Radial.Overlay.Services;
+using SABPlus.Radial.Overlay.UI.Services;
 using SABPlus.Radial.Overlay.UI.ViewModels;
 using System;
 using System.ComponentModel;
@@ -15,7 +16,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using Forms = System.Windows.Forms;
 
 namespace SABPlus.Radial.Overlay.UI.Views
@@ -23,7 +23,6 @@ namespace SABPlus.Radial.Overlay.UI.Views
     public partial class WheelSettingsWindow : Window
     {
         private const string CommandDragFormat = "SABPlus.Radial.Command";
-        private const string SlotDragFormat = "SABPlus.Radial.SlotIndex";
 
         private readonly WheelSettingsRepository _repository;
         private readonly OverlayController _overlayController;
@@ -35,7 +34,6 @@ namespace SABPlus.Radial.Overlay.UI.Views
         private bool _capturingTrigger;
         private WheelTriggerAction _capturingTriggerAction;
         private bool _closeWithoutPrompt;
-        private Point _wheelDragStart;
         private int _wheelDragSourceIndex;
 
         public WheelSettingsViewModel ViewModel { get; }
@@ -58,7 +56,7 @@ namespace SABPlus.Radial.Overlay.UI.Views
 
             string settingsDirectory = Path.GetDirectoryName(_repository.SettingsFilePath);
             _layoutService = new WindowLayoutService(settingsDirectory);
-            _layoutService.Restore(this);
+            _layoutService.Restore(this, CommandCatalogRow, SelectedPositionRow);
 
             ViewModel = new WheelSettingsViewModel(_overlayController.GetSettingsCopy());
             DataContext = ViewModel;
@@ -141,22 +139,8 @@ namespace SABPlus.Radial.Overlay.UI.Views
             EditorWheelControl.SelectedStageProfileId = ViewModel.SelectedProfile?.Id ?? string.Empty;
             EditorWheelControl.HitResult = new WheelHitResult(WheelHitKind.Cancel, -1, 0.0, 0.0);
 
-            var stageItems = ViewModel.PreviewLevel == WheelDisplayLevel.Stages
-                ? WheelCapsuleMetricsService.CreateStageItems(
-                    orderedProfiles,
-                    ViewModel.WorkingSettings.Geometry)
-                : new System.Collections.Generic.List<WheelCapsuleItemMetrics>();
-            var commandItems = ViewModel.PreviewLevel == WheelDisplayLevel.Commands
-                ? WheelCapsuleMetricsService.CreateCommandItems(
-                    ViewModel.WorkingSettings,
-                    ViewModel.SelectedProfile)
-                : new System.Collections.Generic.List<WheelCapsuleItemMetrics>();
-            double previewSize = WheelGeometryCalculator.GetWindowSize(
-                ViewModel.WorkingSettings.Geometry,
-                WheelCapsuleMetricsService.GetWidths(stageItems),
-                WheelCapsuleMetricsService.GetWidths(commandItems));
-            EditorWheelControl.Width = previewSize;
-            EditorWheelControl.Height = previewSize;
+            // The preview has a fixed coordinate space. Changing the radial offset only moves
+            // capsules and must never scale the center circle or the capsules themselves.
             ProfileList?.Items.Refresh();
         }
 
@@ -170,22 +154,45 @@ namespace SABPlus.Radial.Overlay.UI.Views
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // SAB window entrance animation: short and non-blocking.
-            Opacity = 0.0;
-            BeginAnimation(
-                OpacityProperty,
-                new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(180))
+            // The same interaction timing is used by the SAB "Create Views and Sheets" window.
+            SabWindowAnimationService.AttachWindowAnimations(this);
+
+#if DEBUG
+            await Task.Delay(250);
+            if (ViewModel.SelectedRevitContext != null)
+            {
+                try
                 {
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-                });
+                    string debugMessage =
+                        "Шаг 1. Окно загружено: " + ActualWidth.ToString("0") + " × " + ActualHeight.ToString("0") + " px.\n" +
+                        "Шаг 2. Панели: слева " + LeftSettingsPanel.ActualWidth.ToString("0") +
+                        ", предпросмотр " + PreviewPanel.ActualWidth.ToString("0") +
+                        ", справа " + CommandPanel.ActualWidth.ToString("0") + " px.\n" +
+                        "Шаг 3. Высота каталога: " + CommandCatalogList.ActualHeight.ToString("0") + " px.\n" +
+                        "Шаг 4. Команд в каталоге: " + ViewModel.CatalogCommands.Count + ".";
+                    await _bridgeClient.SendAsync(
+                        ViewModel.SelectedRevitContext.ProcessId,
+                        new BridgeRequest
+                        {
+                            RequestType = BridgeRequestTypes.DebugWheelState,
+                            DebugMessage = debugMessage
+                        },
+                        1000);
+                }
+                catch
+                {
+                    // Revit can close while the standalone editor is still opening.
+                }
+            }
+#endif
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
             _discoveryService.ContextsChanged -= DiscoveryService_ContextsChanged;
-            _layoutService.Save(this);
+            _layoutService.Save(this, CommandCatalogRow, SelectedPositionRow);
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
@@ -540,8 +547,9 @@ namespace SABPlus.Radial.Overlay.UI.Views
             }
 
             ViewModel.SelectSlot(hit.SectorIndex);
-            _wheelDragStart = point;
             _wheelDragSourceIndex = hit.SectorIndex;
+            EditorWheelControl.CaptureMouse();
+            e.Handled = true;
         }
 
         private void EditorWheelControl_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -552,16 +560,33 @@ namespace SABPlus.Radial.Overlay.UI.Views
             }
 
             Point point = e.GetPosition(EditorWheelControl);
-            if (Math.Abs(point.X - _wheelDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
-                Math.Abs(point.Y - _wheelDragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+            WheelHitResult hit = EditorWheelControl.HitTestPoint(point);
+            EditorWheelControl.HitResult = hit;
+            e.Handled = true;
+        }
+
+        private void EditorWheelControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_wheelDragSourceIndex < 0)
             {
                 return;
             }
 
-            DataObject data = new DataObject();
-            data.SetData(SlotDragFormat, _wheelDragSourceIndex);
-            DragDrop.DoDragDrop(EditorWheelControl, data, DragDropEffects.Move);
+            int sourceIndex = _wheelDragSourceIndex;
             _wheelDragSourceIndex = -1;
+            EditorWheelControl.ReleaseMouseCapture();
+
+            WheelHitResult hit = EditorWheelControl.HitTestPoint(e.GetPosition(EditorWheelControl));
+            if (ViewModel.PreviewLevel == WheelDisplayLevel.Commands &&
+                hit.Kind == WheelHitKind.Sector &&
+                hit.SectorIndex != sourceIndex)
+            {
+                ViewModel.SwapSlots(sourceIndex, hit.SectorIndex);
+                ViewModel.SetStatus("Команды переставлены по кольцу.");
+            }
+
+            RefreshPreview();
+            e.Handled = true;
         }
 
         private void CommandCatalogList_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -590,10 +615,6 @@ namespace SABPlus.Radial.Overlay.UI.Views
             {
                 e.Effects = DragDropEffects.Copy;
             }
-            else if (e.Data.GetDataPresent(SlotDragFormat))
-            {
-                e.Effects = DragDropEffects.Move;
-            }
             else
             {
                 e.Effects = DragDropEffects.None;
@@ -617,12 +638,6 @@ namespace SABPlus.Radial.Overlay.UI.Views
                 ViewModel.SelectSlot(hit.SectorIndex);
                 ViewModel.AssignCommandToSelectedSlot(command);
             }
-            else if (e.Data.GetDataPresent(SlotDragFormat))
-            {
-                int sourceIndex = (int)e.Data.GetData(SlotDragFormat);
-                ViewModel.SwapSlots(sourceIndex, hit.SectorIndex);
-            }
-
             RefreshPreview();
         }
 
@@ -915,6 +930,10 @@ namespace SABPlus.Radial.Overlay.UI.Views
                     return geometry.CapsuleFillColorHex;
                 case "CapsuleBorderColorHex":
                     return geometry.CapsuleBorderColorHex;
+                case "CapsuleTextColorHex":
+                    return geometry.CapsuleTextColorHex;
+                case "CapsuleHoverFillColorHex":
+                    return geometry.CapsuleHoverFillColorHex;
                 case "CenterFillColorHex":
                     return geometry.CenterFillColorHex;
                 case "CenterBorderColorHex":
@@ -936,6 +955,12 @@ namespace SABPlus.Radial.Overlay.UI.Views
                     break;
                 case "CapsuleBorderColorHex":
                     geometry.CapsuleBorderColorHex = colorHex;
+                    break;
+                case "CapsuleTextColorHex":
+                    geometry.CapsuleTextColorHex = colorHex;
+                    break;
+                case "CapsuleHoverFillColorHex":
+                    geometry.CapsuleHoverFillColorHex = colorHex;
                     break;
                 case "CenterFillColorHex":
                     geometry.CenterFillColorHex = colorHex;

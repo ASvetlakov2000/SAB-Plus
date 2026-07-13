@@ -84,6 +84,8 @@ namespace SABPlus.Radial.Core.Models
 
         public List<string> PostableCommandNames { get; set; }
 
+        public Dictionary<string, string> PostableCommandDisplayNames { get; set; }
+
         public RevitContextSnapshot()
         {
             RevitVersion = string.Empty;
@@ -92,6 +94,7 @@ namespace SABPlus.Radial.Core.Models
             LastCommandMessage = string.Empty;
             CapturedUtc = DateTime.UtcNow;
             PostableCommandNames = new List<string>();
+            PostableCommandDisplayNames = new Dictionary<string, string>();
         }
     }
 }

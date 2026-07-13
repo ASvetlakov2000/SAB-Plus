@@ -323,12 +323,12 @@ namespace SABPlus.Radial.Overlay.UI.Controls
                 _settings.Geometry.CapsuleBorderColorHex,
                 Color.FromRgb(92, 99, 112),
                 255);
+            Color capsuleHoverColor = ParseColor(
+                _settings.Geometry.CapsuleHoverFillColorHex,
+                Color.FromRgb(15, 108, 189),
+                ToAlpha(_settings.Geometry.CapsuleFillOpacity));
             Brush fill = hovered
-                ? CreateBrush(Color.FromArgb(
-                    ToAlpha(_settings.Geometry.CapsuleFillOpacity),
-                    accentColor.R,
-                    accentColor.G,
-                    accentColor.B))
+                ? CreateBrush(capsuleHoverColor)
                 : CreateBrush(capsuleColor);
             Pen border = selected || hovered
                 ? new Pen(CreateBrush(accentColor), selected ? 2.0 : 1.5)
@@ -356,7 +356,15 @@ namespace SABPlus.Radial.Overlay.UI.Controls
             string label)
         {
             CapsuleContentFlow flow = GetCapsuleContentFlow(centerAngleDegrees);
-            FormattedText text = CreateFormattedText(label, 12.0, FontWeights.SemiBold, Brushes.White);
+            Color textColor = ParseColor(
+                _settings.Geometry.CapsuleTextColorHex,
+                Colors.White,
+                255);
+            FormattedText text = CreateFormattedText(
+                label,
+                12.0,
+                FontWeights.SemiBold,
+                CreateBrush(textColor));
             text.MaxLineCount = 1;
             text.Trimming = TextTrimming.CharacterEllipsis;
 

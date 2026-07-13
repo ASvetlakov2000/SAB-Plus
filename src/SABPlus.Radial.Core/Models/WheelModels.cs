@@ -92,6 +92,10 @@ namespace SABPlus.Radial.Core.Models
 
         public string CapsuleBorderColorHex { get; set; }
 
+        public string CapsuleTextColorHex { get; set; }
+
+        public string CapsuleHoverFillColorHex { get; set; }
+
         public string CenterFillColorHex { get; set; }
 
         public string CenterBorderColorHex { get; set; }
@@ -121,6 +125,8 @@ namespace SABPlus.Radial.Core.Models
             CapsuleGap = 2.0;
             CapsuleFillColorHex = "#1F232B";
             CapsuleBorderColorHex = "#5C6370";
+            CapsuleTextColorHex = "#FFFFFF";
+            CapsuleHoverFillColorHex = "#0F6CBD";
             CenterFillColorHex = "#181C23";
             CenterBorderColorHex = "#0F6CBD";
             CapsuleFillOpacity = 0.96;
@@ -263,7 +269,7 @@ namespace SABPlus.Radial.Core.Models
 
     public sealed class WheelSettings
     {
-        public const int CurrentSchemaVersion = 5;
+        public const int CurrentSchemaVersion = 6;
 
         public int SchemaVersion { get; set; }
 
